@@ -3,71 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CodeBuddy — AI Coding Mentor</title>
+  <title>CodeBuddy</title>
   <link rel="stylesheet" href="style.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="logo">
-          <span class="logo-icon">👨‍💻</span>
-          <span class="logo-text">CodeBuddy</span>
-        </div>
-        <span class="badge">AI Mentor</span>
+        <span class="logo">CodeBuddy</span>
       </div>
 
       <div class="sidebar-section">
-        <h3>🎭 Persona</h3>
-        <div class="persona-list" id="persona-list">
-          <!-- Filled by JS -->
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>🎯 Topik Cepat</h3>
+        <h3>Topik Cepat</h3>
         <div class="quick-topics">
-          <button class="topic-btn" data-topic="Jelaskan konsep async/await di JavaScript dengan contoh kode">⚡ Async/Await</button>
-          <button class="topic-btn" data-topic="Apa perbedaan antara REST API dan GraphQL? Mana yang lebih baik?">🔗 REST vs GraphQL</button>
-          <button class="topic-btn" data-topic="Buatkan contoh CRUD sederhana menggunakan React dan fetch API">⚛️ React CRUD</button>
-          <button class="topic-btn" data-topic="Bagaimana cara kerja Git branch dan merge? Jelaskan dengan contoh">🌿 Git Branching</button>
-          <button class="topic-btn" data-topic="Jelaskan SOLID Principle dengan contoh kode yang mudah dipahami">🏗️ SOLID Principles</button>
-          <button class="topic-btn" data-topic="Tips debugging yang efektif untuk pemula">🐛 Debugging Tips</button>
+          <button class="topic-btn" data-topic="Jelaskan konsep async/await di JavaScript dengan contoh kode">Async/Await</button>
+          <button class="topic-btn" data-topic="Apa perbedaan antara REST API dan GraphQL? Mana yang lebih baik?">REST vs GraphQL</button>
+          <button class="topic-btn" data-topic="Buatkan contoh CRUD sederhana menggunakan React dan fetch API">React CRUD</button>
+          <button class="topic-btn" data-topic="Bagaimana cara kerja Git branch dan merge? Jelaskan dengan contoh">Git Branching</button>
+          <button class="topic-btn" data-topic="Jelaskan SOLID Principle dengan contoh kode yang mudah dipahami">SOLID Principles</button>
+          <button class="topic-btn" data-topic="Tips debugging yang efektif untuk pemula">Debugging Tips</button>
         </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>⚙️ Parameter AI</h3>
-        <div class="setting-row">
-          <label>Temperature</label>
-          <div class="range-group">
-            <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7"/>
-            <span id="temp-val">0.7</span>
-          </div>
-        </div>
-        <div class="setting-row">
-          <label>Top-K</label>
-          <div class="range-group">
-            <input type="range" id="top-k" min="1" max="40" step="1" value="40"/>
-            <span id="topk-val">40</span>
-          </div>
-        </div>
-        <div class="setting-row">
-          <label>Top-P</label>
-          <div class="range-group">
-            <input type="range" id="top-p" min="0" max="1" step="0.05" value="0.9"/>
-            <span id="topp-val">0.9</span>
-          </div>
-        </div>
-        <p class="setting-hint">💡 Kreatif ← → Presisi</p>
       </div>
 
       <div class="sidebar-footer">
-        <button id="clear-chat" class="btn-clear">🗑️ Hapus Chat</button>
-        <small class="version">v1.0 — Gemini 2.0 Flash</small>
+        <div class="server-status" id="server-status">
+          <span class="status-dot"></span>
+          <span>Mengecek koneksi...</span>
+        </div>
+        <button id="clear-chat" class="btn-clear">Hapus Chat</button>
       </div>
     </aside>
 
@@ -77,60 +41,21 @@
     <!-- Main Chat -->
     <main class="main">
       <header class="main-header">
-        <button id="menu-toggle" class="menu-toggle">☰</button>
-        <div class="header-info">
-          <h1>CodeBuddy</h1>
-          <span class="status" id="status">Siap membantu kamu ngoding! 🚀</span>
-        </div>
-        <div class="header-actions">
-          <span class="msg-count" id="msg-count">0 pesan</span>
-        </div>
+        <button id="menu-toggle" class="menu-toggle">&#9776;</button>
+        <h1>CodeBuddy</h1>
       </header>
 
       <div id="chat-box" class="chat-box">
         <div class="welcome">
-          <div class="welcome-icon">👨‍💻</div>
-          <h2>Halo! Gue CodeBuddy 👋</h2>
-          <p>AI Coding Mentor siap bantu kamu belajar ngoding. Tanya apa aja — dari konsep dasar sampai advanced!</p>
-          <div class="welcome-features">
-            <div class="feature">
-              <span>💡</span>
-              <span>Jelaskan konsep programming</span>
-            </div>
-            <div class="feature">
-              <span>🧑‍💻</span>
-              <span>Bantuin nulis & review kode</span>
-            </div>
-            <div class="feature">
-              <span>🐛</span>
-              <span>Debugging & cari solusi error</span>
-            </div>
-            <div class="feature">
-              <span>📚</span>
-              <span>Kasih contoh kode lengkap</span>
-            </div>
-          </div>
-          <div class="server-status" id="server-status">
-            <span class="status-dot"></span>
-            <span>Mengecek koneksi server...</span>
-          </div>
+          <h2>CodeBuddy</h2>
+          <p>AI Coding Mentor. Tanya apa aja soal programming.</p>
         </div>
       </div>
 
       <form id="chat-form" class="chat-form">
-        <div class="input-wrapper">
-          <textarea id="user-input" placeholder="Tanya sesuatu ke CodeBuddy..." rows="1" autocomplete="off"></textarea>
-          <div class="input-actions">
-            <span class="char-count" id="char-count">0</span>
-          </div>
-        </div>
-        <button type="submit" id="send-btn" disabled>
-          <span class="send-icon">➤</span>
-        </button>
+        <input type="text" id="user-input" placeholder="Tanya sesuatu..." autocomplete="off" required />
+        <button type="submit" id="send-btn" disabled>Send</button>
       </form>
-      <footer class="main-footer">
-        <small>CodeBuddy menggunakan Gemini AI via backend Node.js. Kode yang dihasilkan mungkin perlu disesuaikan.</small>
-      </footer>
     </main>
   </div>
 

@@ -1,72 +1,85 @@
-/* ============================================
-   CodeBuddy — AI Coding Mentor
-   Frontend: Vanilla JS → POST /api/chat
-   ============================================ */
-
 const form = document.getElementById('chat-form');
 const input = document.getElementById('user-input');
 const chatBox = document.getElementById('chat-box');
 const sendBtn = document.getElementById('send-btn');
-const statusEl = document.getElementById('status');
-const msgCountEl = document.getElementById('msg-count');
-const charCountEl = document.getElementById('char-count');
+const clearBtn = document.getElementById('clear-chat');
 const serverStatusEl = document.getElementById('server-status');
+const menuToggle = document.getElementById('menu-toggle');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
 
-// ---- Conversation History ----
 const conversation = [];
-let messageCount = 0;
 
 // ---- Health Check ----
 async function checkServer() {
   const dot = serverStatusEl.querySelector('.status-dot');
   const text = serverStatusEl.querySelector('span:last-child');
-
   try {
     const res = await fetch('/api/health');
     const data = await res.json();
-
     if (data.status === 'ok') {
       dot.classList.add('connected');
-      text.textContent = `Server terhubung — Model: ${data.model}`;
+      text.textContent = 'Server terhubung';
     }
   } catch {
     dot.classList.add('error');
-    text.textContent = 'Server tidak terhubung. Pastikan backend berjalan.';
+    text.textContent = 'Server tidak terhubung';
   }
 }
 
-// ---- Init ----
 checkServer();
 
-// Enable/disable tombol Send berdasarkan input
+// ---- Input ----
 input.addEventListener('input', () => {
   sendBtn.disabled = !input.value.trim();
-  charCountEl.textContent = input.value.length;
 });
 
-// ---- Form Submit ----
+// ---- Quick Topics ----
+document.querySelectorAll('.topic-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    input.value = btn.dataset.topic;
+    sendBtn.disabled = false;
+    form.dispatchEvent(new Event('submit'));
+  });
+});
+
+// ---- Clear Chat ----
+clearBtn.addEventListener('click', () => {
+  conversation.length = 0;
+  chatBox.innerHTML = `
+    <div class="welcome">
+      <h2>CodeBuddy</h2>
+      <p>AI Coding Mentor. Tanya apa aja soal programming.</p>
+    </div>
+  `;
+});
+
+// ---- Mobile Menu ----
+menuToggle.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('active');
+});
+
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('active');
+});
+
+// ---- Submit ----
 form.addEventListener('submit', async function (e) {
   e.preventDefault();
 
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  // 1. Tampilkan pesan user di chat box
   appendMessage('user', userMessage);
   input.value = '';
   sendBtn.disabled = true;
-  charCountEl.textContent = '0';
-  messageCount++;
-  msgCountEl.textContent = `${messageCount} pesan`;
 
-  // 2. Tambahkan ke conversation history
   conversation.push({ role: 'user', text: userMessage });
 
-  // 3. Tampilkan "Thinking..." sementara
-  const thinkingEl = appendMessage('bot', '🤔 Thinking...');
-  statusEl.textContent = 'Lagi mikir... 🤔';
+  const thinkingEl = appendMessage('bot', 'Thinking...');
 
-  // 4. Kirim ke backend Gemini API
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -76,30 +89,22 @@ form.addEventListener('submit', async function (e) {
 
     const data = await response.json();
 
-    // 5. Ganti "Thinking..." dengan respons AI dari Gemini
     if (response.ok && data.result) {
       conversation.push({ role: 'model', text: data.result });
       thinkingEl.querySelector('.message-content').textContent = data.result;
-      messageCount++;
-      msgCountEl.textContent = `${messageCount} pesan`;
     } else {
       thinkingEl.querySelector('.message-content').textContent =
         'Sorry, no response received.';
     }
   } catch (error) {
     console.error('Chat Error:', error);
-
-    // 6. Error handling
     thinkingEl.querySelector('.message-content').textContent =
       'Failed to get response from server.';
-  } finally {
-    statusEl.textContent = 'Siap membantu kamu ngoding! 🚀';
   }
 });
 
-// ---- Tambahkan pesan ke chat box ----
+// ---- Append Message ----
 function appendMessage(sender, text) {
-  // Hapus welcome screen jika ada
   const welcome = chatBox.querySelector('.welcome');
   if (welcome) welcome.remove();
 
@@ -114,5 +119,5 @@ function appendMessage(sender, text) {
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
 
-  return msg; // Return element agar bisa di-update (untuk Thinking...)
+  return msg;
 }
