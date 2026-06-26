@@ -84,47 +84,41 @@ app.get('/api/health', (req, res) => {
  *
  * Body request:
  * {
- *   messages: [
- *     { role: "user", content: "Halo" },
- *     { role: "model", content: "Halo juga!" },
- *     { role: "user", content: "Jelaskan async/await" }
- *   ],
- *   persona: "default",
- *   settings: { temperature: 0.7, topK: 40, topP: 0.9 }
+ *   conversation: [
+ *     { role: "user", text: "Halo" },
+ *     { role: "model", text: "Halo juga!" },
+ *     { role: "user", text: "Jelaskan async/await" }
+ *   ]
  * }
+ *
+ * Response:
+ * { result: "<gemini_ai_response>" }
  */
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, persona, settings } = req.body;
+    const { conversation } = req.body;
 
-    // Validasi: messages harus berupa array
-    if (!Array.isArray(messages) || messages.length === 0) {
+    // Validasi: conversation harus berupa array
+    if (!Array.isArray(conversation) || conversation.length === 0) {
       return res.status(400).json({
-        error: 'messages harus berupa array dan tidak boleh kosong.',
-        code: 'INVALID_MESSAGES'
+        error: 'conversation harus berupa array dan tidak boleh kosong.'
       });
     }
 
-    // Validasi: setiap pesan harus punya role dan content
-    for (const msg of messages) {
-      if (!msg.role || !msg.content) {
+    // Validasi: setiap pesan harus punya role dan text
+    for (const msg of conversation) {
+      if (!msg.role || !msg.text) {
         return res.status(400).json({
-          error: 'Setiap pesan harus memiliki role dan content.',
-          code: 'INVALID_MESSAGE_FORMAT'
+          error: 'Setiap pesan harus memiliki role dan text.'
         });
       }
     }
 
-    // Tentukan system instruction berdasarkan persona
-    const selectedPersona = persona && PERSONAS[persona]
-      ? PERSONAS[persona]
-      : PERSONAS.default;
-
     // Konfigurasi generation parameters
     const generationConfig = {
-      temperature: settings?.temperature ?? 0.7,
-      topK: settings?.topK ?? 40,
-      topP: settings?.topP ?? 0.9,
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.9,
       maxOutputTokens: 8192
     };
 
@@ -132,18 +126,18 @@ app.post('/api/chat', async (req, res) => {
     const model = genAI.getGenerativeModel({
       model: GEMINI_MODEL,
       systemInstruction: {
-        parts: [{ text: selectedPersona }]
+        parts: [{ text: DEFAULT_SYSTEM_INSTRUCTION }]
       }
     });
 
-    // Format messages ke format Gemini (role: user/model, parts)
+    // Format conversation ke format Gemini
     // Pisahkan pesan terakhir sebagai input, sisanya sebagai history
-    const history = messages.slice(0, -1).map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : msg.role,
-      parts: [{ text: msg.content }]
+    const history = conversation.slice(0, -1).map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.text }]
     }));
 
-    const lastMessage = messages[messages.length - 1].content;
+    const lastMessage = conversation[conversation.length - 1].text;
 
     // Mulai chat session dengan history
     const chat = model.startChat({
@@ -157,15 +151,7 @@ app.post('/api/chat', async (req, res) => {
     const reply = response.text();
 
     // Kirim respons ke frontend
-    res.json({
-      reply,
-      model: GEMINI_MODEL,
-      usage: {
-        promptTokens: response.usageMetadata?.promptTokenCount || 0,
-        completionTokens: response.usageMetadata?.candidatesTokenCount || 0,
-        totalTokens: response.usageMetadata?.totalTokenCount || 0
-      }
-    });
+    res.json({ result: reply });
 
   } catch (error) {
     console.error('Gemini API Error:', error);
@@ -173,28 +159,24 @@ app.post('/api/chat', async (req, res) => {
     // Handle berbagai jenis error
     if (error.message?.includes('API_KEY_INVALID') || error.status === 400) {
       return res.status(400).json({
-        error: 'API Key tidak valid. Periksa kembali API Key kamu.',
-        code: 'INVALID_API_KEY'
+        error: 'API Key tidak valid. Periksa kembali API Key kamu.'
       });
     }
 
     if (error.status === 429) {
       return res.status(429).json({
-        error: 'Terlalu banyak request. Tunggu beberapa saat dan coba lagi.',
-        code: 'RATE_LIMIT'
+        error: 'Terlalu banyak request. Tunggu beberapa saat dan coba lagi.'
       });
     }
 
     if (error.status === 403) {
       return res.status(403).json({
-        error: 'Akses ditolak. Pastikan API Key memiliki izin yang benar.',
-        code: 'ACCESS_DENIED'
+        error: 'Akses ditolak. Pastikan API Key memiliki izin yang benar.'
       });
     }
 
     res.status(500).json({
-      error: 'Terjadi kesalahan pada server. Coba lagi nanti.',
-      code: 'SERVER_ERROR'
+      error: 'Terjadi kesalahan pada server. Coba lagi nanti.'
     });
   }
 });

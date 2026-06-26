@@ -1,289 +1,75 @@
 /* ============================================
    CodeBuddy — AI Coding Mentor
-   Frontend: Vanilla JS → Backend /api/chat
+   Frontend: Vanilla JS → POST /api/chat
+   API Spec:
+     Request:  { conversation: [{ role, text }] }
+     Response: { result: "<gemini_response>" }
    ============================================ */
 
 // ---- DOM Elements ----
 const form = document.getElementById('chat-form');
 const input = document.getElementById('user-input');
 const chatBox = document.getElementById('chat-box');
-const sendBtn = document.getElementById('send-btn');
-const clearChatBtn = document.getElementById('clear-chat');
-const statusEl = document.getElementById('status');
-const msgCountEl = document.getElementById('msg-count');
-const charCountEl = document.getElementById('char-count');
-const menuToggle = document.getElementById('menu-toggle');
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('overlay');
-const personaList = document.getElementById('persona-list');
-const serverStatusEl = document.getElementById('server-status');
 
-// Range inputs
-const temperatureInput = document.getElementById('temperature');
-const topKInput = document.getElementById('top-k');
-const topPInput = document.getElementById('top-p');
-const tempVal = document.getElementById('temp-val');
-const topkVal = document.getElementById('topk-val');
-const toppVal = document.getElementById('topp-val');
-
-// ---- State ----
-const API_BASE = '';  // Same origin
-let messageCount = 0;
-let isLoading = false;
-let selectedPersona = 'default';
-let serverConnected = false;
-
-// Conversation history — array of { role, content } objects
+// ---- Conversation History ----
+// Array of { role: "user"|"model", text: "..." }
 // Dikirim ke backend setiap kali user mengirim pesan
-let conversationHistory = [];
+const conversation = [];
 
-// ---- Initialize ----
-async function init() {
-  // Load settings
-  loadSettings();
-
-  // Auto-resize textarea
-  input.addEventListener('input', () => {
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-    charCountEl.textContent = input.value.length;
-    sendBtn.disabled = !input.value.trim() || isLoading;
-  });
-
-  // Form submit
-  form.addEventListener('handleSubmit', handleSubmit);
-  form.addEventListener('submit', handleSubmit);
-
-  // Quick topics
-  document.querySelectorAll('.topic-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      input.value = btn.dataset.topic;
-      input.dispatchEvent(new Event('input'));
-      handleSubmit(new Event('submit'));
-    });
-  });
-
-  // Clear chat
-  clearChatBtn.addEventListener('click', clearChat);
-
-  // Mobile menu
-  menuToggle.addEventListener('click', toggleSidebar);
-  overlay.addEventListener('click', toggleSidebar);
-
-  // Enter to send (Shift+Enter for new line)
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!sendBtn.disabled) handleSubmit(new Event('submit'));
-    }
-  });
-
-  // Range inputs
-  temperatureInput.addEventListener('input', () => {
-    tempVal.textContent = temperatureInput.value;
-    saveSettings();
-  });
-
-  topKInput.addEventListener('input', () => {
-    topkVal.textContent = topKInput.value;
-    saveSettings();
-  });
-
-  topPInput.addEventListener('input', () => {
-    toppVal.textContent = topPInput.value;
-    saveSettings();
-  });
-
-  // Load personas
-  await loadPersonas();
-
-  // Check server health
-  await checkServerHealth();
-
-  // Focus input
-  input.focus();
-}
-
-// ---- Load Personas from Backend ----
-async function loadPersonas() {
-  try {
-    const response = await fetch(`${API_BASE}/api/personas`);
-    const data = await response.json();
-
-    personaList.innerHTML = '';
-    data.personas.forEach(persona => {
-      const btn = document.createElement('button');
-      btn.className = `persona-btn ${persona.id === selectedPersona ? 'active' : ''}`;
-      btn.dataset.persona = persona.id;
-      btn.innerHTML = `
-        <span class="persona-emoji">${persona.emoji}</span>
-        <div class="persona-info">
-          <div class="persona-name">${persona.name}</div>
-          <div class="persona-desc">${persona.description}</div>
-        </div>
-      `;
-      btn.addEventListener('click', () => selectPersona(persona.id));
-      personaList.appendChild(btn);
-    });
-  } catch (error) {
-    console.error('Failed to load personas:', error);
-    personaList.innerHTML = '<p style="font-size:12px;color:var(--text-muted)">Gagal memuat persona</p>';
-  }
-}
-
-// ---- Select Persona ----
-function selectPersona(personaId) {
-  selectedPersona = personaId;
-
-  // Update UI
-  document.querySelectorAll('.persona-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.persona === personaId);
-  });
-
-  saveSettings();
-}
-
-// ---- Check Server Health ----
-async function checkServerHealth() {
-  const dot = serverStatusEl.querySelector('.status-dot');
-  const text = serverStatusEl.querySelector('span:last-child');
-
-  try {
-    const response = await fetch(`${API_BASE}/api/health`);
-    const data = await response.json();
-
-    if (data.status === 'ok') {
-      serverConnected = true;
-      dot.className = 'status-dot connected';
-      text.textContent = `Server terhubung — Model: ${data.model}`;
-    }
-  } catch (error) {
-    serverConnected = false;
-    dot.className = 'status-dot error';
-    text.textContent = 'Server tidak terhubung. Pastikan backend berjalan.';
-  }
-}
-
-// ---- Settings ----
-function saveSettings() {
-  const settings = {
-    persona: selectedPersona,
-    temperature: temperatureInput.value,
-    topK: topKInput.value,
-    topP: topPInput.value
-  };
-  localStorage.setItem('codebuddy_settings', JSON.stringify(settings));
-}
-
-function loadSettings() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('codebuddy_settings'));
-    if (saved) {
-      selectedPersona = saved.persona || 'default';
-      if (saved.temperature) temperatureInput.value = saved.temperature;
-      if (saved.topK) topKInput.value = saved.topK;
-      if (saved.topP) topPInput.value = saved.topP;
-
-      tempVal.textContent = temperatureInput.value;
-      topkVal.textContent = topKInput.value;
-      toppVal.textContent = topPInput.value;
-    }
-  } catch (e) {
-    // Use defaults
-  }
-}
-
-// ---- Mobile Sidebar ----
-function toggleSidebar() {
-  sidebar.classList.toggle('open');
-  overlay.classList.toggle('active');
-}
-
-// ---- Handle Submit ----
-async function handleSubmit(e) {
+// ---- Event Listener ----
+form.addEventListener('submit', async function (e) {
   e.preventDefault();
 
   const userMessage = input.value.trim();
-  if (!userMessage || isLoading) return;
+  if (!userMessage) return;
 
-  // Clear input
-  input.value = '';
-  input.style.height = 'auto';
-  charCountEl.textContent = '0';
-  sendBtn.disabled = true;
-
-  // Remove welcome screen
-  const welcome = chatBox.querySelector('.welcome');
-  if (welcome) welcome.remove();
-
-  // Show user message
+  // 1. Tampilkan pesan user di chat box
   appendMessage('user', userMessage);
-  messageCount++;
-  updateMsgCount();
+  input.value = '';
 
-  // Show typing indicator
-  showTyping();
-  setLoading(true);
+  // 2. Tambahkan user message ke conversation history
+  conversation.push({ role: 'user', text: userMessage });
 
+  // 3. Tampilkan "Thinking..." sementara
+  const thinkingEl = appendMessage('bot', '🤔 Thinking...');
+
+  // 4. Kirim request ke backend
   try {
-    // Tambahkan user message ke conversation history
-    conversationHistory.push({
-      role: 'user',
-      content: userMessage
-    });
-
-    // Kirim SELURUH conversation history (messages array) ke backend
-    const response = await fetch(`${API_BASE}/api/chat`, {
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: conversationHistory,
-        persona: selectedPersona,
-        settings: {
-          temperature: parseFloat(temperatureInput.value),
-          topK: parseInt(topKInput.value),
-          topP: parseFloat(topPInput.value)
-        }
-      })
+      body: JSON.stringify({ conversation })
     });
 
     const data = await response.json();
 
-    hideTyping();
+    // 5. Ganti "Thinking..." dengan respons AI
+    if (response.ok && data.result) {
+      // Tambahkan model response ke conversation history
+      conversation.push({ role: 'model', text: data.result });
 
-    if (!response.ok) {
-      // Hapus pesan terakhir dari history jika gagal
-      conversationHistory.pop();
-      throw new Error(data.error || `Server error: ${response.status}`);
+      // Update DOM dengan respons dari Gemini
+      thinkingEl.querySelector('.message-content').innerHTML = formatMarkdown(data.result);
+    } else {
+      // Tidak ada result yang diterima
+      thinkingEl.querySelector('.message-content').innerHTML =
+        '<span style="color: var(--orange)">⚠️ Sorry, no response received.</span>';
     }
-
-    // Tambahkan bot response ke conversation history
-    conversationHistory.push({
-      role: 'model',
-      content: data.reply
-    });
-
-    // Tampilkan respons dari Gemini
-    appendMessage('bot', data.reply);
-    messageCount++;
-    updateMsgCount();
-
-    // Log token usage (development info)
-    if (data.usage) {
-      console.log(`Token usage — Prompt: ${data.usage.promptTokens}, Completion: ${data.usage.completionTokens}, Total: ${data.usage.totalTokens}`);
-    }
-
   } catch (error) {
-    hideTyping();
     console.error('Chat Error:', error);
-    showError(error.message || 'Terjadi kesalahan. Coba lagi nanti.');
-  } finally {
-    setLoading(false);
-  }
-}
 
-// ---- Append Message ----
+    // 6. Error handling — gagal menghubungi server
+    thinkingEl.querySelector('.message-content').innerHTML =
+      '<span style="color: var(--red)">❌ Failed to get response from server.</span>';
+  }
+});
+
+// ---- Append Message ke Chat Box ----
 function appendMessage(sender, text) {
+  // Hapus welcome screen jika ada
+  const welcome = chatBox.querySelector('.welcome');
+  if (welcome) welcome.remove();
+
   const msgDiv = document.createElement('div');
   msgDiv.classList.add('message', sender);
 
@@ -304,19 +90,21 @@ function appendMessage(sender, text) {
   msgDiv.appendChild(content);
   chatBox.appendChild(msgDiv);
   chatBox.scrollTop = chatBox.scrollHeight;
+
+  return msgDiv; // Return element agar bisa di-update (untuk Thinking...)
 }
 
 // ---- Format Markdown ----
 function formatMarkdown(text) {
   let html = text;
 
-  // Escape HTML first to prevent XSS
+  // Escape HTML untuk mencegah XSS
   html = html
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Code blocks with language
+  // Code blocks dengan bahasa
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
     const language = lang || 'code';
     const codeId = 'code_' + Math.random().toString(36).substr(2, 8);
@@ -364,9 +152,7 @@ function copyCode(btn) {
   const codeEl = document.getElementById(codeId);
   if (!codeEl) return;
 
-  const code = codeEl.textContent;
-
-  navigator.clipboard.writeText(code).then(() => {
+  navigator.clipboard.writeText(codeEl.textContent).then(() => {
     btn.classList.add('copied');
     btn.textContent = '✅ Copied!';
     setTimeout(() => {
@@ -374,9 +160,9 @@ function copyCode(btn) {
       btn.textContent = '📋 Copy';
     }, 2000);
   }).catch(() => {
-    // Fallback for older browsers
+    // Fallback untuk browser lama
     const textarea = document.createElement('textarea');
-    textarea.value = code;
+    textarea.value = codeEl.textContent;
     textarea.style.position = 'fixed';
     textarea.style.opacity = '0';
     document.body.appendChild(textarea);
@@ -394,108 +180,3 @@ function copyCode(btn) {
 
 // Make copyCode globally available
 window.copyCode = copyCode;
-
-// ---- Show Error ----
-function showError(text) {
-  const msgDiv = document.createElement('div');
-  msgDiv.classList.add('message', 'bot');
-
-  const avatar = document.createElement('div');
-  avatar.classList.add('message-avatar');
-  avatar.textContent = '⚠️';
-
-  const content = document.createElement('div');
-  content.classList.add('message-content');
-  content.innerHTML = `<span style="color: var(--orange)">${text}</span>`;
-
-  msgDiv.appendChild(avatar);
-  msgDiv.appendChild(content);
-  chatBox.appendChild(msgDiv);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-// ---- Typing Indicator ----
-function showTyping() {
-  const typing = document.createElement('div');
-  typing.className = 'typing-indicator';
-  typing.id = 'typing';
-
-  typing.innerHTML = `
-    <div class="message-avatar" style="background-color: var(--green-dim);">👨‍💻</div>
-    <div class="typing-dots">
-      <span></span><span></span><span></span>
-    </div>
-  `;
-
-  chatBox.appendChild(typing);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function hideTyping() {
-  const typing = document.getElementById('typing');
-  if (typing) typing.remove();
-}
-
-// ---- Loading State ----
-function setLoading(state) {
-  isLoading = state;
-  sendBtn.disabled = state || !input.value.trim();
-
-  if (state) {
-    statusEl.textContent = 'Lagi mikir... 🤔';
-    sendBtn.innerHTML = '<span class="send-icon">⏳</span>';
-  } else {
-    statusEl.textContent = 'Siap membantu kamu ngoding! 🚀';
-    sendBtn.innerHTML = '<span class="send-icon">➤</span>';
-  }
-}
-
-// ---- Clear Chat ----
-async function clearChat() {
-  if (messageCount === 0) return;
-
-  if (!confirm('Yakin mau hapus semua chat?')) return;
-
-  // Clear frontend
-  messageCount = 0;
-  conversationHistory = [];
-  updateMsgCount();
-
-  chatBox.innerHTML = `
-    <div class="welcome">
-      <div class="welcome-icon">👨‍💻</div>
-      <h2>Halo! Gue CodeBuddy 👋</h2>
-      <p>AI Coding Mentor siap bantu kamu belajar ngoding. Tanya apa aja — dari konsep dasar sampai advanced!</p>
-      <div class="welcome-features">
-        <div class="feature">
-          <span>💡</span>
-          <span>Jelaskan konsep programming</span>
-        </div>
-        <div class="feature">
-          <span>🧑‍💻</span>
-          <span>Bantuin nulis & review kode</span>
-        </div>
-        <div class="feature">
-          <span>🐛</span>
-          <span>Debugging & cari solusi error</span>
-        </div>
-        <div class="feature">
-          <span>📚</span>
-          <span>Kasih contoh kode lengkap</span>
-        </div>
-      </div>
-      <div class="server-status" id="server-status">
-        <span class="status-dot ${serverConnected ? 'connected' : ''}"></span>
-        <span>${serverConnected ? 'Server terhubung' : 'Mengecek koneksi...'}</span>
-      </div>
-    </div>
-  `;
-}
-
-// ---- Update Message Count ----
-function updateMsgCount() {
-  msgCountEl.textContent = `${messageCount} pesan`;
-}
-
-// ---- Run ----
-init();
