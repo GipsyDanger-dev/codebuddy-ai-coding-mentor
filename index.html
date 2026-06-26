@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CodeBuddy — AI Coding Mentor</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">👨‍💻</span>
+          <span class="logo-text">CodeBuddy</span>
+        </div>
+        <span class="badge">AI Mentor</span>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>🔑 API Key</h3>
+        <div class="api-key-group">
+          <input type="password" id="api-key" placeholder="Masukkan Gemini API Key..." />
+          <button id="toggle-key" title="Show/Hide">👁️</button>
+        </div>
+        <small>Belum punya? <a href="https://aistudio.google.com/apikey" target="_blank">Dapatkan di sini</a></small>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>🎯 Topik Cepat</h3>
+        <div class="quick-topics">
+          <button class="topic-btn" data-topic="Jelaskan konsep async/await di JavaScript dengan contoh kode">⚡ Async/Await</button>
+          <button class="topic-btn" data-topic="Apa perbedaan antara REST API dan GraphQL? Mana yang lebih baik?">🔗 REST vs GraphQL</button>
+          <button class="topic-btn" data-topic="Buatkan contoh CRUD sederhana menggunakan React dan fetch API">⚛️ React CRUD</button>
+          <button class="topic-btn" data-topic="Bagaimana cara kerja Git branch dan merge? Jelaskan dengan contoh">🌿 Git Branching</button>
+          <button class="topic-btn" data-topic="Jelaskan SOLID Principle dengan contoh kode yang mudah dipahami">🏗️ SOLID Principles</button>
+          <button class="topic-btn" data-topic="Tips debugging yang efektif untuk pemula">🐛 Debugging Tips</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>⚙️ Pengaturan</h3>
+        <div class="setting-row">
+          <label for="language">Bahasa Kode</label>
+          <select id="language">
+            <option value="any">Bebas</option>
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="typescript">TypeScript</option>
+            <option value="go">Go</option>
+            <option value="rust">Rust</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="difficulty">Level Penjelasan</label>
+          <select id="difficulty">
+            <option value="pemula">🟢 Pemula</option>
+            <option value="menengah" selected>🟡 Menengah</option>
+            <option value="lanjutan">🔴 Lanjutan</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="clear-chat" class="btn-clear">🗑️ Hapus Chat</button>
+        <small class="version">v1.0 — Gemini 2.0 Flash</small>
+      </div>
+    </aside>
+
+    <!-- Main Chat -->
+    <main class="main">
+      <header class="main-header">
+        <button id="menu-toggle" class="menu-toggle">☰</button>
+        <div class="header-info">
+          <h1>CodeBuddy</h1>
+          <span class="status" id="status">Siap membantu kamu ngoding! 🚀</span>
+        </div>
+        <div class="header-actions">
+          <span class="msg-count" id="msg-count">0 pesan</span>
+        </div>
+      </header>
+
+      <div id="chat-box" class="chat-box">
+        <div class="welcome">
+          <div class="welcome-icon">👨‍💻</div>
+          <h2>Halo! Gue CodeBuddy 👋</h2>
+          <p>AI Coding Mentor siap bantu kamu belajar ngoding. Tanya apa aja — dari konsep dasar sampai advanced!</p>
+          <div class="welcome-features">
+            <div class="feature">
+              <span>💡</span>
+              <span>Jelaskan konsep programming</span>
+            </div>
+            <div class="feature">
+              <span>🧑‍💻</span>
+              <span>Bantuin nulis & review kode</span>
+            </div>
+            <div class="feature">
+              <span>🐛</span>
+              <span>Debugging & cari solusi error</span>
+            </div>
+            <div class="feature">
+              <span>📚</span>
+              <span>Kasih contoh kode lengkap</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form id="chat-form" class="chat-form">
+        <div class="input-wrapper">
+          <textarea id="user-input" placeholder="Tanya sesuatu ke CodeBuddy..." rows="1" autocomplete="off"></textarea>
+          <div class="input-actions">
+            <span class="char-count" id="char-count">0</span>
+          </div>
+        </div>
+        <button type="submit" id="send-btn" disabled>
+          <span class="send-icon">➤</span>
+        </button>
+      </form>
+      <footer class="main-footer">
+        <small>CodeBuddy menggunakan Gemini AI. Kode yang dihasilkan mungkin perlu disesuaikan.</small>
+      </footer>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
