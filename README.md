@@ -1,61 +1,66 @@
 # 👨‍💻 CodeBuddy — AI Coding Mentor
 
-Chatbot berbasis AI yang berperan sebagai **Coding Mentor** pribadi. Menggunakan arsitektur **client-server** dengan backend **Node.js + Express** dan **Google Gemini 2.0 Flash API** untuk menghasilkan respons yang cerdas dan relevan.
+Chatbot berbasis AI yang berperan sebagai **Coding Mentor** pribadi. Menggunakan arsitektur **client-server** dengan backend **Node.js + Express** dan **Google Gemini 2.5 Flash API** untuk menghasilkan respons yang cerdas dan relevan.
 
 ## ✨ Fitur Utama
 
-- 🤖 **AI-Powered Chat** — Respons dinamis dari Gemini 2.0 Flash, bukan hardcode
+- 🤖 **AI-Powered Chat** — Respons dinamis dari Gemini 2.5 Flash, bukan hardcode
 - 🏗️ **Arsitektur Client-Server** — Logika AI di backend, lebih aman dan scalable
-- 💬 **Conversation Memory** — Mengingat percakapan sebelumnya dalam sesi yang sama
+- 💬 **Multi-Turn Conversation** — Mengirim array `messages` (riwayat percakapan) ke backend
 - 🎭 **Multi-Persona** — Pilih gaya mentor: Default, Senior Dev, Guru, Teman Coding, Interviewer
 - ⚙️ **Konfigurasi Parameter AI** — Atur Temperature, Top-K, Top-P secara real-time
 - 🎨 **Code Syntax Highlighting** — Format kode rapi dengan tombol copy
 - 🎯 **Quick Topics** — Topik coding populer dalam satu klik
 - 📱 **Responsive Design** — Tampilan optimal di desktop dan mobile
 - 🌙 **Dark Theme** — UI modern, developer-friendly
+- 📦 **ES Modules** — Menggunakan syntax `import/export` modern
 
 ## 🏛️ Arsitektur Sistem
 
 ```
 ┌─────────────────┐         POST /api/chat         ┌─────────────────────┐
 │                 │  ─────────────────────────────►  │                     │
-│    Frontend     │         { message, persona,      │   Backend           │
-│  (Vanilla JS)   │           sessionId, settings }  │  (Node.js+Express)  │
-│                 │                                  │                     │
-│  index.html     │  ◄─────────────────────────────  │  server.js          │
-│  style.css      │         { reply, usage }         │                     │
-│  script.js      │                                  │  ┌───────────────┐  │
-│                 │                                  │  │  Gemini SDK   │  │
-└─────────────────┘                                  │  │ generateContent│ │
-                                                     │  └───────┬───────┘  │
+│    Frontend     │         { messages: [            │   Backend           │
+│  (Vanilla JS)   │           { role, content },     │  (Node.js+Express)  │
+│                 │           { role, content },     │                     │
+│  index.html     │         ],                      │  index.js           │
+│  style.css      │           persona, settings }   │                     │
+│  script.js      │                                 │  ┌───────────────┐  │
+│                 │  ◄─────────────────────────────  │  │  Gemini SDK   │  │
+│                 │         { reply, usage }         │  │ generateContent│ │
+└─────────────────┘                                 │  └───────┬───────┘  │
                                                      │          │          │
                                                      └──────────┼──────────┘
                                                                 │
                                                                 ▼
                                                      ┌─────────────────────┐
                                                      │   Google Gemini     │
-                                                     │   2.0 Flash API     │
+                                                     │   2.5 Flash API     │
                                                      └─────────────────────┘
 ```
 
-### Alur Data
+### Alur Data (Multi-Turn Conversation)
 
 1. **User** mengirim pesan melalui form chat di browser
-2. **Frontend** mengirim `POST` request ke endpoint `/api/chat` di backend
-3. **Backend** memanggil `generateContent()` dari **Gemini SDK** dengan:
-   - System instruction (persona CodeBuddy)
-   - Conversation history (memory)
+2. **Frontend** menambahkan pesan ke `conversationHistory` array
+3. **Frontend** mengirim **SELURUH** `messages` array ke `POST /api/chat`
+4. **Backend** menerima array `messages`, memvalidasi format (`role` + `content`)
+5. **Backend** memisahkan **history** (pesan sebelumnya) dan **pesan terakhir**
+6. **Backend** memanggil `generateContent()` dari **Gemini SDK** dengan:
+   - System instruction (persona yang dipilih)
+   - Conversation history (multi-turn context)
    - Parameter AI (temperature, top_k, top_p)
-4. **Gemini AI** menghasilkan respons yang relevan
-5. **Backend** mengirim respons kembali ke frontend
-6. **Frontend** menampilkan respons di antarmuka chat secara real-time
+7. **Gemini AI** menghasilkan respons yang relevan berdasarkan konteks percakapan
+8. **Backend** mengirim respons kembali ke frontend
+9. **Frontend** menambahkan respons ke history dan menampilkan di chat
 
 ## 🛠️ Teknologi
 
 | Teknologi | Kegunaan |
 |-----------|----------|
-| **Node.js** | Runtime server |
+| **Node.js** | Runtime server (ES Modules) |
 | **Express** | Web framework & API routing |
+| **CORS** | Middleware untuk request lintas origin |
 | **@google/generative-ai** | Gemini SDK resmi dari Google |
 | **dotenv** | Manajemen environment variables |
 | **HTML5** | Struktur halaman frontend |
@@ -66,15 +71,15 @@ Chatbot berbasis AI yang berperan sebagai **Coding Mentor** pribadi. Menggunakan
 
 ```
 starter/
-├── server.js           # Backend: Express server + Gemini API integration
-├── package.json        # Dependencies & scripts
+├── index.js            # Backend: Express + Gemini 2.5 Flash + CORS
+├── package.json        # Dependencies & scripts (type: "module")
 ├── .env                # API key (tidak di-commit ke Git)
 ├── .gitignore          # Ignored files
 ├── README.md           # Dokumentasi
 └── public/             # Frontend files (served by Express)
     ├── index.html      # Halaman utama chat UI
     ├── style.css       # Styling (dark theme)
-    └── script.js       # Fetch ke /api/chat
+    └── script.js       # Fetch ke /api/chat (messages array)
 ```
 
 ## 🚀 Cara Menjalankan
@@ -153,18 +158,19 @@ Chatbot memiliki 5 persona yang bisa dipilih:
 
 | Method | Endpoint | Fungsi |
 |--------|----------|--------|
-| `POST` | `/api/chat` | Kirim pesan & terima respons AI |
-| `POST` | `/api/chat/clear` | Hapus conversation history |
+| `POST` | `/api/chat` | Kirim pesan (messages array) & terima respons AI |
 | `GET` | `/api/personas` | Daftar persona yang tersedia |
 | `GET` | `/api/health` | Health check server |
 
-### Contoh Request
+### Contoh Request — POST /api/chat
 
 ```javascript
-// POST /api/chat
 {
-  "message": "Jelaskan async/await di JavaScript",
-  "sessionId": "session_123",
+  "messages": [
+    { "role": "user", "content": "Halo, perkenalkan dirimu" },
+    { "role": "model", "content": "Halo! Gue CodeBuddy..." },
+    { "role": "user", "content": "Jelaskan async/await di JavaScript" }
+  ],
   "persona": "default",
   "settings": {
     "temperature": 0.7,
@@ -179,7 +185,7 @@ Chatbot memiliki 5 persona yang bisa dipilih:
 ```javascript
 {
   "reply": "Oke, gue jelasin async/await ya! ...",
-  "sessionId": "session_123",
+  "model": "gemini-2.5-flash",
   "usage": {
     "promptTokens": 150,
     "completionTokens": 800,
@@ -198,7 +204,8 @@ Chatbot memiliki 5 persona yang bisa dipilih:
 
 ## 📝 Catatan
 
+- Menggunakan **ES Modules** (`"type": "module"` di package.json, syntax `import/export`)
 - API Key disimpan di **server-side** (`.env`), tidak pernah dikirim ke browser
-- Conversation history tersimpan di **memory server** (hilang saat server restart)
-- Percakapan per session dibersihkan otomatis setelah 30 menit tidak aktif
-- Menggunakan model **Gemini 2.0 Flash** yang cepat dan efisien
+- Conversation history dikirim sebagai **messages array** ke backend (multi-turn)
+- Backend menggunakan **CORS** middleware untuk mengizinkan request lintas origin
+- Menggunakan model **Gemini 2.5 Flash** yang cepat dan efisien

@@ -30,14 +30,12 @@ const toppVal = document.getElementById('topp-val');
 const API_BASE = '';  // Same origin
 let messageCount = 0;
 let isLoading = false;
-let sessionId = generateSessionId();
 let selectedPersona = 'default';
 let serverConnected = false;
 
-// ---- Generate Session ID ----
-function generateSessionId() {
-  return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
+// Conversation history — array of { role, content } objects
+// Dikirim ke backend setiap kali user mengirim pesan
+let conversationHistory = [];
 
 // ---- Initialize ----
 async function init() {
@@ -228,13 +226,18 @@ async function handleSubmit(e) {
   setLoading(true);
 
   try {
-    // Kirim request ke backend
+    // Tambahkan user message ke conversation history
+    conversationHistory.push({
+      role: 'user',
+      content: userMessage
+    });
+
+    // Kirim SELURUH conversation history (messages array) ke backend
     const response = await fetch(`${API_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: userMessage,
-        sessionId: sessionId,
+        messages: conversationHistory,
         persona: selectedPersona,
         settings: {
           temperature: parseFloat(temperatureInput.value),
@@ -249,8 +252,16 @@ async function handleSubmit(e) {
     hideTyping();
 
     if (!response.ok) {
+      // Hapus pesan terakhir dari history jika gagal
+      conversationHistory.pop();
       throw new Error(data.error || `Server error: ${response.status}`);
     }
+
+    // Tambahkan bot response ke conversation history
+    conversationHistory.push({
+      role: 'model',
+      content: data.reply
+    });
 
     // Tampilkan respons dari Gemini
     appendMessage('bot', data.reply);
@@ -445,20 +456,9 @@ async function clearChat() {
 
   if (!confirm('Yakin mau hapus semua chat?')) return;
 
-  // Clear on backend
-  try {
-    await fetch(`${API_BASE}/api/chat/clear`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId })
-    });
-  } catch (e) {
-    // Ignore error, still clear frontend
-  }
-
   // Clear frontend
   messageCount = 0;
-  sessionId = generateSessionId();
+  conversationHistory = [];
   updateMsgCount();
 
   chatBox.innerHTML = `

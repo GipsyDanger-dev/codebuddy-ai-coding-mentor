@@ -1,17 +1,19 @@
 {
   "name": "codebuddy-ai-coding-mentor",
-  "version": "1.0.0",
-  "description": "👨‍💻 CodeBuddy — AI Coding Mentor chatbot powered by Gemini 2.0 Flash API",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "👨‍💻 CodeBuddy — AI Coding Mentor chatbot powered by Gemini 2.5 Flash API",
+  "type": "module",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "keywords": ["chatbot", "gemini", "ai", "coding-mentor", "nodejs"],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2"
   }
